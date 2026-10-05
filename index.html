@@ -812,10 +812,17 @@ function estimateText(job){
   if(s.phone) lines.push('', s.phone);
   return lines.filter(l=>l!==null).join('\n');
 }
+// Sharing counts as sending: Draft -> Sent, and a Lead moves to Estimate.
+function markEstimateSent(job){
+  let changed=false;
+  if(job.estimate.status==='Draft'){ job.estimate.status='Sent'; changed=true; }
+  if(job.status==='Lead'){ job.status='Estimate'; changed=true; }
+  if(changed){ persist(); toast('Estimate marked as Sent'); }
+}
 async function shareEstimate(job){
   const text = estimateText(job), title = `Estimate ${job.number}`;
-  if(navigator.share){ try{ await navigator.share({ title, text }); return; }catch(e){ if(e.name==='AbortError') return; } }
-  try{ await navigator.clipboard.writeText(text); toast('Estimate copied — paste it into a text or email'); }catch(e){ toast('Sharing not available here — use Print / PDF'); }
+  if(navigator.share){ try{ await navigator.share({ title, text }); markEstimateSent(job); return; }catch(e){ if(e.name==='AbortError') return; } }
+  try{ await navigator.clipboard.writeText(text); toast('Estimate copied — paste it into a text or email'); markEstimateSent(job); }catch(e){ toast('Sharing not available here — use Print / PDF'); }
 }
 
 // ============================================================
@@ -1057,14 +1064,16 @@ document.addEventListener('click', e=>{
 
 function onField(e){
   const el=e.target;
+  // Search boxes re-render their list on 'input' only. A 'change' fires when the box blurs —
+  // i.e. the moment you tap a result — and re-rendering then would replace the row mid-tap.
   if(el.dataset.ui!=null){
     const k=el.dataset.ui; setPath(ui, k, el.value);
-    if(k==='q'){ document.getElementById('jobs-list').innerHTML=jobsListHtml(); }
-    else if(k==='clientQ'){ document.getElementById('clients-list').innerHTML=clientsListHtml(); }
+    if(k==='q'){ if(e.type==='input') document.getElementById('jobs-list').innerHTML=jobsListHtml(); }
+    else if(k==='clientQ'){ if(e.type==='input') document.getElementById('clients-list').innerHTML=clientsListHtml(); }
     else if(e.type==='change' || k==='range.preset' || k==='sort'){ render(); }
     return;
   }
-  if(el.id==='pk-q'){ document.getElementById('pk-list').innerHTML=pickerListHtml(el.value); return; }
+  if(el.id==='pk-q'){ if(e.type==='input') document.getElementById('pk-list').innerHTML=pickerListHtml(el.value); return; }
   if(el.dataset.f==null) return;
   if(route.view==='settings'){ data.settings[el.dataset.f]=el.value.trim(); scheduleSave(); return; }
   if(route.view!=='job') return;
@@ -1080,6 +1089,10 @@ function onField(e){
 }
 document.addEventListener('input', onField);
 document.addEventListener('change', onField);
+// Enter in the expense row adds the expense (phone keyboards show a "go" key).
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && (e.target.id==='exp-cost' || e.target.id==='exp-desc')){ e.preventDefault(); const b=document.querySelector('[data-action="add-expense"]'); if(b) b.click(); }
+});
 
 // ============================================================
 // boot
