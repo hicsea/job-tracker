@@ -602,8 +602,7 @@ function clientBlock(c){
     <div class="cb-name">${h(c.name)}</div>
     ${c.phone?`<div class="cb-line">${h(c.phone)}</div>`:''}${c.email?`<div class="cb-line">${h(c.email)}</div>`:''}${c.address?`<div class="cb-line">${h(c.address)}</div>`:''}
     <div class="cb-actions">
-      ${c.phone?`<a class="btn small" href="tel:${tel(c.phone)}">Call</a><a class="btn small" href="sms:${tel(c.phone)}">Text</a><a class="btn small" href="sms:${tel(c.phone)}?body=${encodeURIComponent(onMyWayMsg())}">On my way</a>`:''}
-      ${c.email?`<a class="btn small" href="mailto:${h(c.email)}">Email</a>`:''}
+      ${c.phone?`<a class="btn small" href="sms:${tel(c.phone)}">Message</a><a class="btn small" href="sms:${tel(c.phone)}?body=${encodeURIComponent(onMyWayMsg())}">On my way</a>`:''}
       <button class="btn small" data-action="pick-client">Change</button>
     </div></div>`;
 }
@@ -846,9 +845,7 @@ function renderClientDetail(c){
     ${c.phone?`<div class="cb-line">${h(c.phone)}</div>`:''}${c.email?`<div class="cb-line">${h(c.email)}</div>`:''}${c.address?`<div class="cb-line">${h(c.address)}</div>`:''}
     ${c.notes?`<p class="small" style="margin-top:8px">${h(c.notes)}</p>`:''}
     <div class="cb-actions">
-      ${c.phone?`<a class="btn small" href="tel:${tel(c.phone)}">Call</a><a class="btn small" href="sms:${tel(c.phone)}">Text</a>`:''}
-      ${c.email?`<a class="btn small" href="mailto:${h(c.email)}">Email</a>`:''}
-      ${c.address?`<a class="btn small" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">Map</a>`:''}
+      ${c.phone?`<a class="btn small" href="sms:${tel(c.phone)}">Message</a>`:''}
       <button class="btn small" data-action="client-edit">Edit</button>
     </div></section>
     <div class="sec-head" style="margin:14px 2px 8px"><h2 style="font-size:16px">Jobs (${jobs.length})</h2><button class="btn small primary" data-action="client-new-job">+ New job</button></div>
