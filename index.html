@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2428">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Job Tracker</title>
+<style>
+:root{
+  --bg:#f2f3f5; --card:#fff; --text:#1b1f23; --muted:#6b7280; --line:#e3e5e8; --ink:#1f2428;
+  --accent:#d9661f; --accent-dk:#b8521a; --green:#2e7d4f; --red:#b4382f; --amber:#b7791f;
+  --blue:#2563a8; --purple:#6f4fb8; --r:10px;
+}
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif; }
+#app{ max-width:640px; margin:0 auto; min-height:100vh; padding-bottom:calc(72px + env(safe-area-inset-bottom)); }
+body.sub #app{ padding-bottom:24px; }
+
+/* top bar */
+#topbar{ position:sticky; top:0; z-index:30; background:var(--ink); color:#fff; display:flex; align-items:center; gap:8px; padding:0 12px; height:calc(52px + env(safe-area-inset-top)); padding-top:env(safe-area-inset-top); }
+#back-btn{ display:none; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; border:0; background:rgba(255,255,255,.12); color:#fff; font-size:22px; cursor:pointer; margin-left:-6px; }
+#topbar-title{ font-weight:700; font-size:18px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#topbar-right{ display:flex; gap:6px; align-items:center; }
+.tb-btn{ background:rgba(255,255,255,.14); border:0; color:#fff; padding:8px 11px; border-radius:7px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+.save-ind{ font-size:12px; color:#9aa3ad; transition:color .3s; }
+.save-ind.saving{ color:#f0b35a; }
+
+main{ padding:12px 12px 24px; }
+.card{ background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px; margin-bottom:12px; }
+.card h2{ margin:0 0 8px; font-size:17px; font-weight:700; }
+.sec-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px; }
+.sec-head h2{ margin:0; }
+.card.danger{ border-color:#e8b4b0; }
+p{ margin:6px 0 10px; }
+
+label{ display:block; font-size:12px; color:var(--muted); font-weight:600; margin:10px 0 4px; text-transform:uppercase; letter-spacing:.04em; }
+input,select,textarea{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:8px; background:#fafafa; font:inherit; font-size:16px; color:var(--text); min-height:44px; }
+input:focus,select:focus,textarea:focus{ outline:2px solid var(--accent); outline-offset:-1px; background:#fff; }
+textarea{ resize:vertical; min-height:88px; field-sizing:content; line-height:1.4; }
+textarea.short{ min-height:56px; }
+input[type=checkbox]{ width:22px; height:22px; min-height:0; margin:0; accent-color:var(--accent); }
+.check{ display:flex; align-items:center; gap:8px; text-transform:none; font-size:14.5px; color:var(--text); margin-top:12px; letter-spacing:0; font-weight:500; }
+.row{ display:flex; gap:8px; }
+.row>div{ flex:1; min-width:0; }
+.row3{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.row3 label,.row label{ margin-top:8px; }
+
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--line); background:#fff; color:var(--text); padding:11px 14px; border-radius:8px; font:inherit; font-size:15px; font-weight:600; cursor:pointer; text-decoration:none; min-height:44px; }
+.btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.primary:active{ background:var(--accent-dk); }
+.btn.secondary{ background:#f6f7f8; }
+.btn.small{ padding:7px 11px; min-height:36px; font-size:13.5px; }
+.btn.wide{ width:100%; margin-top:10px; }
+.btn:disabled{ opacity:.45; cursor:default; }
+.btn.danger-text{ border:0; background:none; color:var(--red); }
+.actions{ display:flex; gap:8px; margin-top:12px; }
+.actions .btn{ flex:1; }
+.x{ background:none; border:0; color:var(--muted); font-size:17px; padding:6px 10px; cursor:pointer; line-height:1; }
+
+.muted{ color:var(--muted); }
+.small{ font-size:12.5px; }
+.mono{ font-variant-numeric:tabular-nums; }
+.pos{ color:var(--green); }
+.neg{ color:var(--red); }
+.empty{ color:var(--muted); text-align:center; padding:18px 8px; font-size:14px; }
+.sub-label{ font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:14px 0 6px; }
+.chip{ display:inline-block; font-size:11px; font-weight:700; color:#fff; padding:3px 8px; border-radius:999px; white-space:nowrap; }
+.chip.hold{ background:var(--red); }
+.note{ background:#fff7ed; border:1px solid #fcd9b6; border-radius:8px; padding:9px 11px; font-size:13px; color:#7a4a1e; margin-top:10px; }
+
+/* snapshot */
+.snapshot{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.snap{ background:var(--ink); color:#fff; border-radius:var(--r); padding:10px 12px; }
+.snap .k{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#9aa3ad; font-weight:600; }
+.snap .v{ font-size:16.5px; font-weight:700; margin-top:3px; line-height:1.25; }
+.snap .v.pos{ color:#7fd39a; } .snap .v.neg{ color:#f29a92; }
+.snap .muted{ color:#7d858f; font-weight:500; }
+
+/* pills */
+.pills{ display:flex; flex-wrap:wrap; gap:6px; }
+.pill{ border:1px solid var(--line); background:#fff; color:var(--text); padding:8px 12px; border-radius:999px; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; min-height:36px; }
+.pill.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+/* client box */
+.client-box{ border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:#fafafa; }
+.cb-name{ font-weight:700; font-size:16px; }
+.cb-name.big{ font-size:20px; }
+.cb-line{ font-size:13.5px; color:var(--muted); }
+.cb-actions{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+
+/* estimate line items */
+.item{ border:1px solid var(--line); border-left:4px solid #c9ccd1; border-radius:8px; padding:10px 12px; margin:10px 0; background:#fff; }
+.item.approved{ border-left-color:var(--green); }
+.item.declined{ border-left-color:var(--red); }
+.item-head{ display:flex; align-items:center; gap:8px; }
+.item-num{ font-weight:700; font-size:13px; color:var(--muted); flex:1; white-space:nowrap; }
+.seg{ display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+.seg button{ border:0; background:#fff; padding:7px 9px; font:inherit; font-size:12px; font-weight:600; color:var(--muted); cursor:pointer; min-height:34px; }
+.seg button+button{ border-left:1px solid var(--line); }
+.seg button.on{ background:var(--ink); color:#fff; }
+.item.approved .seg button.on{ background:var(--green); }
+.item.declined .seg button.on{ background:var(--red); }
+.item>input,.item>textarea{ margin-top:8px; }
+.line-total{ text-align:right; font-size:13.5px; margin-top:8px; }
+.line-total b{ font-size:15px; margin-left:6px; }
+details.internal{ margin-top:10px; background:#f6f7f8; border-radius:8px; padding:8px 10px; }
+details.internal summary{ font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; }
+.totals{ margin-top:12px; border-top:1px solid var(--line); padding-top:8px; }
+.t-row{ display:flex; justify-content:space-between; padding:4px 0; font-size:14.5px; }
+.t-row b{ font-size:15.5px; }
+.totals.dark{ background:var(--ink); color:#d6dae0; border-radius:var(--r); padding:12px 14px; border:0; }
+.totals.dark b{ color:#fff; }
+.totals.dark .t-row.big{ border-top:1px solid rgba(255,255,255,.15); margin-top:6px; padding-top:10px; font-size:16px; }
+.totals.dark .t-row.big b{ font-size:22px; }
+.totals.dark .pos{ color:#7fd39a; } .totals.dark .neg{ color:#f29a92; }
+
+/* work days */
+.wd{ border:1px solid var(--line); border-radius:8px; padding:8px 12px 12px; margin:10px 0; background:#fafafa; }
+.wd-head{ display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:13.5px; }
+.wd input{ margin-top:8px; }
+
+/* photos */
+.photo-add{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.photo-add .btn{ padding:10px 4px; font-size:14px; }
+.thumbs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.thumbs img{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; cursor:pointer; background:#eee; display:block; }
+
+/* expenses */
+.exp{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:14px; }
+.exp .dot{ width:9px; height:9px; border-radius:3px; flex:none; }
+.exp-desc{ flex:1; min-width:0; }
+.exp-desc small{ display:block; color:var(--muted); font-size:12px; }
+.exp-add input,.exp-add select{ margin-top:8px; }
+table.cmp{ width:100%; border-collapse:collapse; font-size:14px; }
+.cmp th{ text-align:right; font-size:11.5px; color:var(--muted); text-transform:uppercase; padding:4px 0; font-weight:700; }
+.cmp th:first-child,.cmp td:first-child{ text-align:left; }
+.cmp td{ text-align:right; padding:7px 0; border-top:1px solid var(--line); }
+
+/* lists */
+.toolbar{ display:flex; gap:8px; margin-bottom:8px; }
+.toolbar input,.toolbar select{ background:#fff; }
+.chips{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; scrollbar-width:none; }
+.chips::-webkit-scrollbar{ display:none; }
+.job-card{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:12px 14px; margin-bottom:10px; cursor:pointer; }
+.jc-top{ display:flex; align-items:center; gap:8px; font-size:13px; }
+.jc-top .mono{ font-weight:700; }
+.jc-date{ margin-left:auto; color:var(--muted); }
+.jc-title{ font-weight:700; font-size:16px; margin-top:4px; }
+.jc-sub{ font-size:13.5px; color:var(--muted); margin-top:2px; }
+.jc-stats{ font-size:13px; color:#3b4048; margin-top:8px; }
+.list-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:12px 14px; margin-bottom:8px; cursor:pointer; }
+.list-row b{ display:block; font-size:15.5px; }
+.list-row span{ font-size:13px; color:var(--muted); }
+.list-row .count{ flex:none; font-size:13px; color:var(--muted); }
+
+/* calendar */
+.day{ margin-bottom:14px; }
+.day-head{ font-weight:700; font-size:14px; margin:0 2px 6px; display:flex; gap:8px; align-items:center; }
+.day-head .today{ background:var(--accent); color:#fff; font-size:11px; padding:2px 7px; border-radius:999px; }
+.ev{ display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:10px 12px; margin-bottom:6px; cursor:pointer; }
+.ev-time{ min-width:66px; font-weight:700; font-size:13px; line-height:1.3; }
+.ev-main{ flex:1; min-width:0; }
+.ev-main b{ display:block; font-size:14.5px; }
+.ev-type{ font-size:11px; font-weight:700; color:#fff; padding:3px 7px; border-radius:999px; flex:none; }
+.ev-type.est{ background:var(--blue); } .ev-type.work{ background:var(--accent); }
+
+/* overview */
+.stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+.stat{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:12px 10px; border-top:3px solid var(--ink); }
+.stat .num{ font-size:18px; font-weight:800; letter-spacing:-.01em; }
+.stat .lbl{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+.brow{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; }
+.brow:last-child{ border-bottom:0; }
+
+/* nav */
+#bottom-nav{ position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; justify-content:center; background:#fff; border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+.nav-inner{ display:flex; width:100%; max-width:640px; }
+.nav-btn{ flex:1; background:none; border:0; color:var(--muted); padding:8px 2px 7px; display:flex; flex-direction:column; align-items:center; gap:2px; font:inherit; font-size:11px; font-weight:600; cursor:pointer; }
+.nav-btn svg{ width:22px; height:22px; }
+.nav-btn.active{ color:var(--accent); }
+#fab{ display:none; position:fixed; right:16px; bottom:calc(76px + env(safe-area-inset-bottom)); z-index:31; width:56px; height:56px; border-radius:50%; background:var(--accent); color:#fff; border:0; font-size:30px; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.25); cursor:pointer; }
+
+/* sheet */
+#sheet-bg{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; align-items:flex-end; justify-content:center; }
+#sheet-bg.open{ display:flex; }
+#sheet{ background:#fff; width:100%; max-width:640px; border-radius:16px 16px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); max-height:88vh; overflow:auto; }
+#sheet h3{ margin:0 0 10px; font-size:18px; }
+.pk-row{ padding:10px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
+.pk-row b{ display:block; }
+.pk-row span{ font-size:12.5px; color:var(--muted); }
+
+/* photo viewer */
+#viewer{ display:none; position:fixed; inset:0; background:#000; z-index:60; flex-direction:column; }
+#viewer.open{ display:flex; }
+.v-top{ display:flex; gap:8px; padding:10px 12px; align-items:center; background:#111; padding-top:calc(10px + env(safe-area-inset-top)); }
+.v-top select{ flex:1; background:#222; color:#fff; border-color:#333; }
+.v-top .btn{ background:#222; color:#fff; border-color:#333; }
+#viewer img{ flex:1; object-fit:contain; min-height:0; width:100%; }
+
+#toast{ position:fixed; bottom:calc(84px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 16px; border-radius:8px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .25s; z-index:70; max-width:90vw; text-align:center; }
+#toast.show{ opacity:1; }
+body.sub #toast{ bottom:28px; }
+
+/* customer-facing estimate */
+.paper{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:20px 18px; font-size:14px; }
+.p-head{ display:flex; justify-content:space-between; gap:12px; border-bottom:2px solid var(--ink); padding-bottom:12px; margin-bottom:14px; }
+.p-biz{ font-size:20px; font-weight:800; }
+.p-meta{ text-align:right; }
+.p-label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+.p-cols{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.p-item{ border-top:1px solid var(--line); padding:12px 0; }
+.p-item-head{ display:flex; justify-content:space-between; gap:10px; }
+.p-item-title{ font-weight:700; font-size:15px; }
+.p-price{ font-weight:700; white-space:nowrap; }
+.p-scope,.p-mats{ white-space:pre-wrap; margin:6px 0 0 24px; color:#2b3036; }
+.p-break,.p-initials{ margin:6px 0 0 24px; color:var(--muted); font-size:13px; }
+.p-item.declined .p-item-title,.p-item.declined .p-price{ text-decoration:line-through; color:var(--muted); }
+.p-box{ display:inline-block; width:24px; font-size:16px; }
+.p-totals{ border-top:2px solid var(--ink); margin-top:8px; padding-top:10px; }
+.p-trow{ display:flex; justify-content:space-between; padding:3px 0; }
+.p-trow.big{ font-size:17px; font-weight:800; padding-top:8px; }
+.p-approval{ margin-top:22px; border-top:1px solid var(--line); padding-top:12px; }
+.sig{ display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-top:34px; }
+.sig>div{ border-top:1px solid #333; padding-top:4px; font-size:12px; color:var(--muted); }
+@media print{
+  #topbar,#bottom-nav,#fab,.no-print{ display:none !important; }
+  body,#app{ background:#fff; padding:0; }
+  main{ padding:0; }
+  .paper{ border:0; border-radius:0; padding:0; font-size:13px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header id="topbar">
+    <button id="back-btn" data-action="back" aria-label="Back">‹</button>
+    <div id="topbar-title">Jobs</div>
+    <div id="topbar-right"></div>
+  </header>
+  <main id="main"></main>
+  <button id="fab" data-action="new-job" aria-label="Add">+</button>
+  <nav id="bottom-nav"><div class="nav-inner">
+    <button class="nav-btn" data-action="nav" data-val="jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="13" y2="18"/></svg>Jobs</button>
+    <button class="nav-btn" data-action="nav" data-val="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>Clients</button>
+    <button class="nav-btn" data-action="nav" data-val="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>Calendar</button>
+    <button class="nav-btn" data-action="nav" data-val="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="4"/></svg>Overview</button>
+    <button class="nav-btn" data-action="nav" data-val="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2" fill="#fff"/><line x1="4" y1="14" x2="20" y2="14"/><circle cx="16" cy="14" r="2" fill="#fff"/><line x1="4" y1="21" x2="20" y2="21"/><circle cx="11" cy="21" r="2" fill="#fff"/></svg>Settings</button>
+  </div></nav>
+</div>
+
+<div id="sheet-bg" data-action="sheet-bg"><div id="sheet"></div></div>
+<div id="viewer">
+  <div class="v-top">
+    <select id="viewer-cat"></select>
+    <button class="btn small" data-action="photo-del">Delete</button>
+    <button class="btn small" data-action="viewer-close">Close</button>
+  </div>
+  <img id="viewer-img" alt="">
+</div>
+<div id="toast"></div>
+<input type="file" id="photo-input" accept="image/*" multiple hidden>
+<input type="file" id="import-input" accept=".json,application/json" hidden>
+
+<script>
+// ============================================================
+// constants
+// ============================================================
+const LEGACY_KEY = 'handyman-bookkeeping-data';
+const DB_NAME = 'job-tracker', STORE = 'kv';
+const STATUSES = ['Lead','Estimate','Approved','Scheduled','In Progress','Complete'];
+const STATUS_COLORS = { 'Lead':'#6b7280','Estimate':'#2563a8','Approved':'#2e7d4f','Scheduled':'#6f4fb8','In Progress':'#b7791f','Complete':'#1f2428' };
+const EST_STATUSES = ['Draft','Sent','Approved','Declined','Changes Requested'];
+const EXPENSE_CATS = ['Materials','Tools','Fuel','Subcontractor','Permits & Fees','Other'];
+const CAT_COLORS = { 'Materials':'#2e6e62','Tools':'#d9661f','Fuel':'#b7791f','Subcontractor':'#8a4a3d','Permits & Fees':'#5b4b8a','Other':'#6b7280' };
+const PHOTO_CATS = ['Before','During','After','Other'];
+const APPROVAL_METHODS = ['Signed','Text','Email','Verbal','In person'];
+const RANGE_OPTS = [['all','All time'],['week','This week'],['month','This month'],['lastmonth','Last month'],['year','This year'],['custom','Custom range']];
+const TIMES = []; for(let m=6*60; m<=20*60; m+=30) TIMES.push(pad(Math.floor(m/60))+':'+pad(m%60));
+
+// ============================================================
+// state
+// ============================================================
+let data = emptyData();
+let route = { view:'jobs', id:null };
+const ui = { q:'', status:'', sort:'newest', range:{ preset:'all', from:'', to:'' }, clientQ:'', showPast:false };
+let saveTimer = null, pickerCb = null, pendingPhotoCat = 'Other', viewerPhotoId = null, histOk = true, manualStack = [];
+
+function emptyData(){ return { version:5, counters:{}, clients:{}, jobs:{}, settings:{ businessName:'', phone:'', email:'' } }; }
+
+// ============================================================
+// helpers
+// ============================================================
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function parseDate(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function fmtDate(s){ if(!s) return ''; const d=parseDate(s); return `${d.getMonth()+1}/${d.getDate()}/${String(d.getFullYear()).slice(-2)}`; }
+function fmtDateLong(s){ if(!s) return ''; return parseDate(s).toLocaleDateString('en-US',{ weekday:'short', month:'short', day:'numeric' }); }
+function fmtDateFull(s){ if(!s) return ''; return parseDate(s).toLocaleDateString('en-US',{ month:'long', day:'numeric', year:'numeric' }); }
+function fmtTime(t){ if(!t) return ''; const [h,m]=t.split(':').map(Number); return `${((h+11)%12)+1}:${pad(m)} ${h>=12?'PM':'AM'}`; }
+function money(n){ n = Math.round((n||0)*100)/100; const s = Math.abs(n).toLocaleString('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 }); return (n<0?'-$':'$')+s; }
+function numv(n){ return n ? String(n) : ''; }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function h(s){ return String(s==null?'':s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+function tel(s){ return String(s||'').replace(/[^\d+]/g,''); }
+function opts(arr, sel){ return arr.map(o=>`<option value="${h(o)}" ${o===sel?'selected':''}>${h(o)}</option>`).join(''); }
+function timeSelect(attrs, val){
+  const list = val && !TIMES.includes(val) ? [val, ...TIMES] : TIMES;
+  return `<select ${attrs}><option value="">—</option>${list.map(t=>`<option value="${t}" ${t===val?'selected':''}>${fmtTime(t)}</option>`).join('')}</select>`;
+}
+function setPath(o, p, v){ const ks=p.split('.'); for(let i=0;i<ks.length-1;i++){ if(o[ks[i]]==null) o[ks[i]]={}; o=o[ks[i]]; } o[ks[ks.length-1]]=v; }
+let toastTimer;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), 2400); }
+function statusChip(j){ return `<span class="chip" style="background:${STATUS_COLORS[j.status]||'#6b7280'}">${h(j.status)}</span>${j.onHold?' <span class="chip hold">On hold</span>':''}`; }
+
+// ============================================================
+// storage: IndexedDB, falls back to localStorage
+// ============================================================
+const store = {
+  db:null,
+  open(){ return new Promise(res=>{ try{
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = ()=>r.result.createObjectStore(STORE);
+    r.onsuccess = ()=>res(r.result);
+    r.onerror = ()=>res(null); r.onblocked = ()=>res(null);
+  }catch(e){ res(null); } }); },
+  get(){ if(!this.db) return Promise.resolve(localStorage.getItem(LEGACY_KEY));
+    return new Promise(res=>{ try{ const rq=this.db.transaction(STORE,'readonly').objectStore(STORE).get('data'); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>res(null); }catch(e){ res(null); } }); },
+  set(str){ if(!this.db){ try{ localStorage.setItem(LEGACY_KEY, str); return Promise.resolve(true); }catch(e){ return Promise.resolve(false); } }
+    return new Promise(res=>{ try{ const tx=this.db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put(str,'data'); tx.oncomplete=()=>res(true); tx.onerror=()=>res(false); tx.onabort=()=>res(false); }catch(e){ res(false); } }); }
+};
+
+async function persist(){
+  const ok = await store.set(JSON.stringify(data));
+  const ind = document.getElementById('save-ind');
+  if(ind){ ind.textContent = ok ? 'Saved' : 'Not saved!'; ind.classList.remove('saving'); }
+  if(!ok) toast('Could not save — storage may be full. Download a backup.');
+  return ok;
+}
+function scheduleSave(){
+  const ind = document.getElementById('save-ind'); if(ind){ ind.textContent='Saving…'; ind.classList.add('saving'); }
+  clearTimeout(saveTimer); saveTimer = setTimeout(()=>{ saveTimer=null; persist(); }, 500);
+}
+function flushSave(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; persist(); } }
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) flushSave(); });
+window.addEventListener('pagehide', flushSave);
+
+// ============================================================
+// data normalization / migration (accepts any older version)
+// ============================================================
+function migrateV1(old){
+  const out = emptyData();
+  const names = old.jobs||{}, receipts = old.receipts||[], charges = old.charges||[];
+  Object.keys(names).forEach(num=>{
+    const cid = uid(); out.clients[cid] = { id:cid, name:names[num]||('Job '+num), phone:'', email:'', address:'', notes:'' };
+    const rs = receipts.filter(r=>r.job===num), cs = charges.filter(c=>c.job===num);
+    const dates = rs.map(r=>r.date).concat(cs.map(c=>c.date)).filter(Boolean).sort();
+    const id = uid();
+    out.jobs[id] = { id, number:num, date:dates[0]||todayStr(), description:names[num]||num, status:'Complete', clientId:cid,
+      income:{ labor:sum(cs.filter(c=>c.type==='labor')), materials:sum(cs.filter(c=>c.type==='materials')), other:sum(cs.filter(c=>c.type!=='labor'&&c.type!=='materials')) },
+      expenses: rs.map(r=>({ id:uid(), description:(r.vendor||'')+(r.notes?' — '+r.notes:''), category: /tool/i.test(r.category)?'Tools':/fuel/i.test(r.category)?'Fuel':/sub/i.test(r.category)?'Subcontractor':/permit/i.test(r.category)?'Permits & Fees':/material|consum/i.test(r.category)?'Materials':'Other', cost:+r.amount||0 })) };
+  });
+  return out;
+  function sum(a){ return a.reduce((s,c)=>s+(+c.amount||0),0); }
+}
+function normalizeClient(c){ return { id:c.id, name:c.name||'', phone:c.phone||'', email:c.email||'', address:c.address||'', notes:c.notes||'' }; }
+function normalizeItem(it){
+  const price = (it.price && typeof it.price==='object') ? it.price : { labor:+it.price||0 };
+  const cost = it.estCost || it.cost || it.internal || {};
+  let ap = String(it.approval||it.status||'pending').toLowerCase();
+  if(!['pending','approved','declined'].includes(ap)) ap='pending';
+  return { id:it.id||uid(), description:it.description||'', scope:it.scope||'', materials: typeof it.materials==='string'?it.materials:(Array.isArray(it.materials)?it.materials.join('\n'):''),
+    price:{ materials:+price.materials||0, labor:+price.labor||0, other:+price.other||0 },
+    estCost:{ materials:+cost.materials||0, labor:+cost.labor||0, other:+cost.other||0 },
+    approval:ap, initials:it.initials||'' };
+}
+function normalizeJob(j){
+  const n = { id:j.id||uid(), number:j.number||'', date:j.date||todayStr(), description:j.description||'', notes:j.notes||'', clientId:j.clientId||null };
+  n.status = STATUSES.includes(j.status) ? j.status : (j.status==='On Hold' ? 'In Progress' : 'Lead');
+  n.onHold = !!j.onHold || j.status==='On Hold';
+  n.income = { labor:+(j.income&&j.income.labor)||0, materials:+(j.income&&j.income.materials)||0, other:+(j.income&&j.income.other)||0 };
+  n.expenses = (j.expenses||[]).map(e=>({ id:e.id||uid(), description:e.description||'', category:EXPENSE_CATS.includes(e.category)?e.category:'Other', cost:+e.cost||0 }));
+  const ea = j.estimateAppt || (j.schedule && j.schedule.estimate) || {};
+  n.estimateAppt = { date:ea.date||'', time:ea.time||ea.start||'' };
+  const wd = j.workDays || (j.schedule && (j.schedule.work||j.schedule.appointments||j.schedule.workAppointments)) || [];
+  n.workDays = wd.map(w=>({ id:w.id||uid(), date:w.date||'', start:w.start||w.startTime||'', end:w.end||w.endTime||'', notes:w.notes||'' }));
+  const est = j.estimate || {};
+  const a = est.approval || {};
+  n.estimate = { status:EST_STATUSES.includes(est.status)?est.status:'Draft', date:est.date||'', items:(est.items||est.lineItems||[]).map(normalizeItem),
+    approval:{ name:a.name||a.approvedBy||'', date:a.date||'', method:a.method||'', notes:a.notes||'' } };
+  if(Array.isArray(est.scope) && est.scope.length){ // old estimate-level scope sections -> fold into first line item
+    const txt = est.scope.map(s=>[s.heading, s.body].filter(Boolean).join('\n')).join('\n\n');
+    if(n.estimate.items.length) n.estimate.items[0].scope = [n.estimate.items[0].scope, txt].filter(Boolean).join('\n\n');
+    else n.estimate.items.push(normalizeItem({ description:'Scope of work', scope:txt }));
+  }
+  n.photos = (j.photos||[]).map(p=>({ id:p.id||uid(), category:PHOTO_CATS.includes(p.category)?p.category:'Other', data:p.data||p.src||p.dataUrl||'', addedAt:p.addedAt||'' })).filter(p=>p.data);
+  return n;
+}
+function normalizeData(p){
+  if(!p || typeof p!=='object') return emptyData();
+  if(!p.clients && (p.receipts || p.charges)) p = migrateV1(p);
+  const d = emptyData();
+  d.counters = p.counters || {};
+  Object.assign(d.settings, p.settings||{});
+  Object.values(p.clients||{}).forEach(c=>{ if(c&&c.id) d.clients[c.id]=normalizeClient(c); });
+  Object.values(p.jobs||{}).forEach(j=>{ if(j&&j.id){ const n=normalizeJob(j); d.jobs[n.id]=n; } });
+  Object.values(d.jobs).forEach(j=>{ const m=/^(\d{2})-(\d+)$/.exec(j.number); if(m) d.counters[m[1]] = Math.max(d.counters[m[1]]||0, +m[2]); });
+  return d;
+}
+
+async function loadData(){
+  store.db = await store.open();
+  let raw = await store.get(), fromLegacy = false;
+  if(!raw && store.db){ raw = localStorage.getItem(LEGACY_KEY); fromLegacy = !!raw; }
+  if(raw){ try{ data = normalizeData(JSON.parse(raw)); }catch(e){ data = emptyData(); } }
+  if(fromLegacy){ await persist(); setTimeout(()=>toast('Your existing jobs were carried over.'), 500); }
+}
+
+// ============================================================
+// math
+// ============================================================
+function itemPrice(it){ return (it.price.materials||0)+(it.price.labor||0)+(it.price.other||0); }
+function itemCost(it){ return (it.estCost.materials||0)+(it.estCost.labor||0)+(it.estCost.other||0); }
+function estTotals(job){
+  let total=0, approved=0, declined=0, estCost=0, approvedCost=0, anyApproved=false;
+  const by = { materials:0, labor:0, other:0 };
+  job.estimate.items.forEach(it=>{
+    const p=itemPrice(it), c=itemCost(it); total+=p; estCost+=c;
+    ['materials','labor','other'].forEach(k=>by[k]+=it.price[k]||0);
+    if(it.approval==='approved'){ approved+=p; approvedCost+=c; anyApproved=true; }
+    else if(it.approval==='declined') declined+=p;
+  });
+  return { total, approved, declined, estCost, approvedCost, by, anyApproved, cmpPrice:anyApproved?approved:total, cmpCost:anyApproved?approvedCost:estCost };
+}
+function jobTotals(job){
+  const income = (job.income.labor||0)+(job.income.materials||0)+(job.income.other||0);
+  const expenses = job.expenses.reduce((s,e)=>s+(e.cost||0),0);
+  const profit = income-expenses;
+  return { income, expenses, profit, margin: income ? profit/income*100 : null };
+}
+function rangeBounds(){
+  const r=ui.range, now=new Date(), y=now.getFullYear(), m=now.getMonth(), d=now.getDate();
+  switch(r.preset){
+    case 'week': { const dow=now.getDay(), off=(dow===0?-6:1-dow); return { from:ymd(new Date(y,m,d+off)), to:ymd(new Date(y,m,d+off+6)) }; }
+    case 'month': return { from:ymd(new Date(y,m,1)), to:ymd(new Date(y,m+1,0)) };
+    case 'lastmonth': return { from:ymd(new Date(y,m-1,1)), to:ymd(new Date(y,m,0)) };
+    case 'year': return { from:`${y}-01-01`, to:`${y}-12-31` };
+    case 'custom': return { from:r.from||'', to:r.to||'' };
+    default: return { from:'', to:'' };
+  }
+}
+function inRange(date, b){ return !(b.from && date<b.from) && !(b.to && date>b.to); }
+function apptLabel(a){ return a.date ? fmtDateLong(a.date)+(a.time?' · '+fmtTime(a.time):'') : ''; }
+function nextWork(job){
+  const t=todayStr(), ds=job.workDays.filter(w=>w.date).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!ds.length) return { label:'Work days', text:'<span class="muted">None scheduled</span>', date:'' };
+  const up = ds.find(w=>w.date>=t);
+  if(up) return { label:'Next work day', text: fmtDateLong(up.date)+(up.start?' · '+fmtTime(up.start):'')+(ds.length>1?` <span class="muted">(${ds.length} days)</span>`:''), date:up.date };
+  const last = ds[ds.length-1];
+  return { label:'Last work day', text: fmtDateLong(last.date), date:last.date };
+}
+
+// ============================================================
+// job numbering & creation
+// ============================================================
+function reserveNumber(){ const yy=String(new Date().getFullYear()).slice(-2); const n=(data.counters[yy]||0)+1; data.counters[yy]=n; return yy+'-'+String(n).padStart(3,'0'); }
+function createJob(clientId){
+  const j = { id:uid(), number:reserveNumber(), date:todayStr(), description:'', status:'Lead', onHold:false, clientId:clientId||null, notes:'',
+    estimateAppt:{ date:'', time:'' }, estimate:{ status:'Draft', date:todayStr(), items:[], approval:{ name:'', date:'', method:'', notes:'' } },
+    workDays:[], photos:[], income:{ labor:0, materials:0, other:0 }, expenses:[] };
+  data.jobs[j.id] = j; persist(); return j;
+}
+function jobIsEmpty(j){
+  return !j.description && !j.clientId && !j.notes && !j.estimateAppt.date && !j.estimate.items.length && !j.workDays.length && !j.photos.length && !j.expenses.length
+    && !j.income.labor && !j.income.materials && !j.income.other;
+}
+// Called when leaving a job screen: untouched new jobs are discarded and their number released.
+function leaveJob(id){
+  flushSave();
+  const j = data.jobs[id]; if(!j || !jobIsEmpty(j)) return;
+  const m=/^(\d{2})-(\d+)$/.exec(j.number);
+  if(m && data.counters[m[1]]===+m[2]) data.counters[m[1]]--;
+  delete data.jobs[id]; persist();
+}
+
+// ============================================================
+// navigation (browser history so the Android back button works)
+// ============================================================
+function go(view, id=null, replace=false){
+  if(route.view==='job' && !(view==='estimate' && id===route.id)) leaveJob(route.id);
+  route = { view, id };
+  try{ if(replace) history.replaceState(route,''); else history.pushState(route,''); }catch(e){ histOk=false; if(!replace) manualStack.push(route); }
+  render(); window.scrollTo(0,0);
+}
+function goBack(){
+  if(histOk && history.state){ history.back(); return; }
+  if(route.view==='job') leaveJob(route.id);
+  manualStack.pop(); route = manualStack[manualStack.length-1] || { view: route.view==='client' ? 'clients' : 'jobs', id:null }; render(); window.scrollTo(0,0);
+}
+window.addEventListener('popstate', e=>{
+  const next = e.state || { view:'jobs', id:null };
+  if(route.view==='job' && !(next.view==='estimate' && next.id===route.id)) leaveJob(route.id);
+  route = next; render(); window.scrollTo(0,0);
+});
+
+function render(){
+  const main = document.getElementById('main'), v = route.view;
+  const isSub = v==='job' || v==='client' || v==='estimate';
+  document.getElementById('back-btn').style.display = isSub ? 'flex' : 'none';
+  document.getElementById('bottom-nav').style.display = isSub ? 'none' : 'flex';
+  document.body.classList.toggle('sub', isSub);
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.val===v));
+  const fab = document.getElementById('fab');
+  fab.style.display = (v==='jobs' || v==='clients') ? 'flex' : 'none';
+  fab.dataset.action = v==='jobs' ? 'new-job' : 'new-client';
+  const right = document.getElementById('topbar-right'); right.innerHTML = '';
+  let title = 'Jobs';
+  switch(v){
+    case 'jobs': main.innerHTML = renderJobs(); break;
+    case 'clients': title='Clients'; main.innerHTML = renderClients(); break;
+    case 'calendar': title='Calendar'; main.innerHTML = renderCalendar(); break;
+    case 'overview': title='Overview'; main.innerHTML = renderOverview(); break;
+    case 'settings': title='Settings'; main.innerHTML = renderSettings(); break;
+    case 'job': { const job=data.jobs[route.id]; if(!job){ go('jobs',null,true); return; }
+      title = job.number; right.innerHTML = '<span id="save-ind" class="save-ind">Saved</span>'; main.innerHTML = renderJob(job); break; }
+    case 'client': { const c=data.clients[route.id]; if(!c){ go('clients',null,true); return; }
+      title = 'Client'; main.innerHTML = renderClientDetail(c); break; }
+    case 'estimate': { const job=data.jobs[route.id]; if(!job){ go('jobs',null,true); return; }
+      title = 'Estimate '+job.number;
+      right.innerHTML = '<button class="tb-btn" data-action="share-estimate">Share</button><button class="tb-btn" data-action="print">Print / PDF</button>';
+      main.innerHTML = renderEstimate(job); break; }
+  }
+  document.getElementById('topbar-title').textContent = title;
+}
+function rerenderJob(){ const y=window.scrollY; render(); window.scrollTo(0,y); }
+
+// ============================================================
+// JOBS tab
+// ============================================================
+function rangeControl(){
+  return `<select data-ui="range.preset">${RANGE_OPTS.map(([v,l])=>`<option value="${v}" ${ui.range.preset===v?'selected':''}>${l}</option>`).join('')}</select>`
+    + (ui.range.preset==='custom' ? `<div class="row" style="margin-top:8px"><div><input type="date" data-ui="range.from" value="${ui.range.from}"></div><div><input type="date" data-ui="range.to" value="${ui.range.to}"></div></div>` : '');
+}
+function renderJobs(){
+  const chips = [['','All'],['active','Active'],...STATUSES.map(s=>[s,s]),['hold','On hold']];
+  return `
+    <div class="toolbar"><input data-ui="q" placeholder="Search jobs, clients, job #" value="${h(ui.q)}"></div>
+    <div class="chips">${chips.map(([v,l])=>`<button class="pill ${ui.status===v?'on':''}" data-action="filter-status" data-val="${v}">${l}</button>`).join('')}</div>
+    <div class="toolbar"><div style="flex:1">${rangeControl()}</div>
+      <select data-ui="sort" style="flex:1"><option value="newest" ${ui.sort==='newest'?'selected':''}>Newest first</option><option value="oldest" ${ui.sort==='oldest'?'selected':''}>Oldest first</option><option value="num-desc" ${ui.sort==='num-desc'?'selected':''}>Job # high–low</option><option value="num-asc" ${ui.sort==='num-asc'?'selected':''}>Job # low–high</option></select></div>
+    <div id="jobs-list">${jobsListHtml()}</div>`;
+}
+function filteredJobs(){
+  const b=rangeBounds(), q=ui.q.trim().toLowerCase();
+  let jobs = Object.values(data.jobs).filter(j=>inRange(j.date,b));
+  if(q) jobs = jobs.filter(j=>{ const c=data.clients[j.clientId]; return j.number.toLowerCase().includes(q) || j.description.toLowerCase().includes(q) || (c && c.name.toLowerCase().includes(q)); });
+  if(ui.status==='hold') jobs = jobs.filter(j=>j.onHold);
+  else if(ui.status==='active') jobs = jobs.filter(j=>j.status!=='Complete');
+  else if(ui.status) jobs = jobs.filter(j=>j.status===ui.status);
+  jobs.sort((a,b)=>{
+    if(ui.sort==='oldest') return a.date.localeCompare(b.date) || a.number.localeCompare(b.number);
+    if(ui.sort==='num-desc') return b.number.localeCompare(a.number);
+    if(ui.sort==='num-asc') return a.number.localeCompare(b.number);
+    return b.date.localeCompare(a.date) || b.number.localeCompare(a.number);
+  });
+  return jobs;
+}
+function jobsListHtml(){
+  const jobs = filteredJobs();
+  if(!jobs.length) return `<div class="empty">${Object.keys(data.jobs).length ? 'No jobs match these filters.' : 'No jobs yet. Tap + to create your first job.'}</div>`;
+  return jobs.map(jobCard).join('');
+}
+function jobCard(j){
+  const c=data.clients[j.clientId], et=estTotals(j), ft=jobTotals(j), t=todayStr();
+  let when = '';
+  if(j.estimateAppt.date && j.estimateAppt.date>=t && (j.status==='Lead'||j.status==='Estimate')) when = 'Visit '+apptLabel(j.estimateAppt);
+  else { const nw=nextWork(j); if(nw.date) when = (nw.date>=t?'Work ':'Worked ')+fmtDateLong(nw.date); }
+  let stats;
+  if(ft.income>0 || j.status==='Complete') stats = `Income <b>${money(ft.income)}</b> · Costs <b>${money(ft.expenses)}</b> · <span class="${ft.profit>=0?'pos':'neg'}">Profit <b>${money(ft.profit)}</b></span>`;
+  else if(et.total>0) stats = `Quoted <b>${money(et.total)}</b>${et.anyApproved?` · Approved <b class="pos">${money(et.approved)}</b>`:''}`;
+  else stats = '<span class="muted">No estimate yet</span>';
+  return `<div class="job-card" data-action="open-job" data-id="${j.id}">
+    <div class="jc-top"><span class="mono">${h(j.number)}</span>${statusChip(j)}<span class="jc-date">${fmtDate(j.date)}</span></div>
+    <div class="jc-title">${j.description ? h(j.description) : '<span class="muted">Untitled job</span>'}</div>
+    <div class="jc-sub">${c ? h(c.name) : '<span class="muted">No client</span>'}${when ? ' · '+when : ''}</div>
+    <div class="jc-stats">${stats}</div></div>`;
+}
+
+// ============================================================
+// JOB detail
+// ============================================================
+function clientBlock(c){
+  if(!c) return `<button class="btn secondary wide" style="margin-top:0" data-action="pick-client">+ Select or add client</button>`;
+  return `<div class="client-box">
+    <div class="cb-name">${h(c.name)}</div>
+    ${c.phone?`<div class="cb-line">${h(c.phone)}</div>`:''}${c.email?`<div class="cb-line">${h(c.email)}</div>`:''}${c.address?`<div class="cb-line">${h(c.address)}</div>`:''}
+    <div class="cb-actions">
+      ${c.phone?`<a class="btn small" href="tel:${tel(c.phone)}">Call</a><a class="btn small" href="sms:${tel(c.phone)}">Text</a><a class="btn small" href="sms:${tel(c.phone)}?body=${encodeURIComponent(onMyWayMsg())}">On my way</a>`:''}
+      ${c.email?`<a class="btn small" href="mailto:${h(c.email)}">Email</a>`:''}
+      <button class="btn small" data-action="pick-client">Change</button>
+    </div></div>`;
+}
+function onMyWayMsg(){ const b=data.settings.businessName; return `Hi, this is ${b||'your handyman'} — I'm on my way and will be there shortly.`; }
+function moneyInput(attrs, val){ return `<input type="number" inputmode="decimal" step="0.01" min="0" ${attrs} value="${numv(val)}" placeholder="0">`; }
+
+function itemCard(it, i){
+  const p=itemPrice(it), c=itemCost(it), d=`data-item="${it.id}"`;
+  return `<div class="item ${it.approval}">
+    <div class="item-head"><span class="item-num">Line ${i+1}</span>
+      <div class="seg">${['pending','approved','declined'].map(a=>`<button class="${it.approval===a?'on':''}" data-action="item-approval" data-id="${it.id}" data-val="${a}">${cap(a)}</button>`).join('')}</div>
+      <button class="x" data-action="del-item" data-id="${it.id}" aria-label="Remove line">✕</button></div>
+    <input ${d} data-f="description" value="${h(it.description)}" placeholder="Short description (e.g. Paint kitchen ceiling)">
+    <textarea ${d} data-f="scope" placeholder="Scope of work — prep, install details, cleanup, exclusions, warranty, client-supplied materials, concealed conditions…">${h(it.scope)}</textarea>
+    <textarea ${d} data-f="materials" class="short" placeholder="Materials list (optional)">${h(it.materials)}</textarea>
+    <div class="sub-label" style="margin-top:10px">Customer price</div>
+    <div class="row3">
+      <div><label>Materials</label>${moneyInput(`${d} data-f="price.materials" data-num`, it.price.materials)}</div>
+      <div><label>Labor</label>${moneyInput(`${d} data-f="price.labor" data-num`, it.price.labor)}</div>
+      <div><label>Other</label>${moneyInput(`${d} data-f="price.other" data-num`, it.price.other)}</div>
+    </div>
+    <div class="line-total">Line price <b data-live="item-price-${it.id}">${money(p)}</b></div>
+    <details class="internal" ${c>0?'open':''}><summary>My estimated cost (internal — never shown to customer)</summary>
+      <div class="row3">
+        <div><label>Materials</label>${moneyInput(`${d} data-f="estCost.materials" data-num`, it.estCost.materials)}</div>
+        <div><label>Labor</label>${moneyInput(`${d} data-f="estCost.labor" data-num`, it.estCost.labor)}</div>
+        <div><label>Other</label>${moneyInput(`${d} data-f="estCost.other" data-num`, it.estCost.other)}</div>
+      </div>
+      <div class="line-total muted">Est. profit on this line <b data-live="item-margin-${it.id}">${money(p-c)}</b></div>
+    </details>
+    <div class="row"><div style="flex:0 0 46%"><label>Customer initials</label><input ${d} data-f="initials" value="${h(it.initials)}" placeholder="e.g. JS" maxlength="8"></div></div>
+  </div>`;
+}
+function workDayCard(w, i){
+  const d=`data-wd="${w.id}"`;
+  return `<div class="wd">
+    <div class="wd-head"><span data-live="wd-${w.id}">Day ${i+1}${w.date?' · '+fmtDateLong(w.date):''}</span><button class="x" data-action="del-workday" data-id="${w.id}" aria-label="Remove day">✕</button></div>
+    <div class="row3">
+      <div><label>Date</label><input type="date" ${d} data-f="date" value="${w.date}"></div>
+      <div><label>Start</label>${timeSelect(`${d} data-f="start"`, w.start)}</div>
+      <div><label>End</label>${timeSelect(`${d} data-f="end"`, w.end)}</div>
+    </div>
+    <input ${d} data-f="notes" value="${h(w.notes)}" placeholder="Notes for this day (optional)">
+  </div>`;
+}
+function renderJob(job){
+  const c=data.clients[job.clientId], et=estTotals(job), ft=jobTotals(job), nw=nextWork(job), ap=job.estimate.approval;
+  const photosHtml = PHOTO_CATS.map(cat=>{ const ps=job.photos.filter(p=>p.category===cat); if(!ps.length) return '';
+    return `<div class="sub-label">${cat} (${ps.length})</div><div class="thumbs">${ps.map(p=>`<img src="${p.data}" data-action="view-photo" data-id="${p.id}" loading="lazy" alt="">`).join('')}</div>`; }).join('');
+  return `
+  <div class="snapshot">
+    <div class="snap"><div class="k">Status</div><div class="v">${statusChip(job)}</div></div>
+    <div class="snap"><div class="k">Quoted</div><div class="v" data-live="snap-quoted">${money(et.total)}</div></div>
+    <div class="snap"><div class="k">Approved</div><div class="v pos" data-live="snap-approved">${money(et.approved)}</div></div>
+    <div class="snap"><div class="k">Profit so far</div><div class="v ${ft.profit>=0?'pos':'neg'}" data-live="snap-profit">${money(ft.profit)}</div></div>
+    <div class="snap"><div class="k">Estimate visit</div><div class="v" data-live="snap-visit">${apptLabel(job.estimateAppt)||'<span class="muted">Not set</span>'}</div></div>
+    <div class="snap"><div class="k" data-live="snap-work-label">${nw.label}</div><div class="v" data-live="snap-work">${nw.text}</div></div>
+  </div>
+
+  <section class="card" id="sec-info">
+    <h2>Job info</h2>
+    <label>Job name</label>
+    <input data-f="description" value="${h(job.description)}" placeholder="e.g. Smith bathroom repair">
+    <label>Client</label>
+    ${clientBlock(c)}
+    <label>Status</label>
+    <div class="pills">${STATUSES.map(s=>`<button class="pill ${job.status===s?'on':''}" data-action="status" data-val="${s}">${s}</button>`).join('')}</div>
+    <label class="check"><input type="checkbox" data-f="onHold" ${job.onHold?'checked':''}> On hold</label>
+    <div class="row">
+      <div><label>Estimate visit</label><input type="date" data-f="estimateAppt.date" value="${job.estimateAppt.date}"></div>
+      <div><label>Time</label>${timeSelect('data-f="estimateAppt.time"', job.estimateAppt.time)}</div>
+    </div>
+    <div class="row"><div style="flex:0 0 50%"><label>Job date (for reports)</label><input type="date" data-f="date" value="${job.date}"></div></div>
+  </section>
+
+  <section class="card" id="sec-estimate">
+    <div class="sec-head"><h2>Estimate &amp; scope</h2><span class="muted small">Customer-facing</span></div>
+    <div class="row">
+      <div><label>Estimate status</label><select data-f="estimate.status">${opts(EST_STATUSES, job.estimate.status)}</select></div>
+      <div><label>Estimate date</label><input type="date" data-f="estimate.date" value="${job.estimate.date}"></div>
+    </div>
+    ${job.estimate.items.map(itemCard).join('') || '<div class="empty">No line items yet. Each line is one piece of work with its own scope and price.</div>'}
+    <button class="btn secondary wide" data-action="add-item">+ Add line item</button>
+    <div class="totals">
+      <div class="t-row"><span>Estimate total</span><b data-live="est-total">${money(et.total)}</b></div>
+      <div class="t-row"><span>Approved</span><b class="pos" data-live="est-approved">${money(et.approved)}</b></div>
+      <div class="t-row" data-live-row="est-declined" style="display:${et.declined>0?'':'none'}"><span>Declined</span><b class="neg" data-live="est-declined">${money(et.declined)}</b></div>
+    </div>
+    <details ${et.anyApproved||ap.name||ap.date?'open':''}><summary class="sub-label" style="cursor:pointer;display:list-item">Customer approval record</summary>
+      <div class="row"><div><label>Approved by</label><input data-f="estimate.approval.name" value="${h(ap.name)}" placeholder="Customer name"></div><div><label>Date</label><input type="date" data-f="estimate.approval.date" value="${ap.date}"></div></div>
+      <div class="row"><div><label>How</label><select data-f="estimate.approval.method"><option value="">—</option>${opts(APPROVAL_METHODS, ap.method)}</select></div><div><label>Notes</label><input data-f="estimate.approval.notes" value="${h(ap.notes)}" placeholder="Optional"></div></div>
+    </details>
+    <div class="actions">
+      <button class="btn primary" data-action="view-estimate">View / send estimate</button>
+      <button class="btn secondary" data-action="schedule-work" ${et.anyApproved?'':'disabled'}>Schedule work →</button>
+    </div>
+  </section>
+
+  <section class="card" id="sec-schedule">
+    <div class="sec-head"><h2>Work schedule</h2><span class="muted small">Work days only</span></div>
+    ${job.workDays.map(workDayCard).join('') || '<div class="empty">No work days scheduled.</div>'}
+    <button class="btn secondary wide" data-action="add-workday">+ Add work day</button>
+  </section>
+
+  <section class="card" id="sec-photos">
+    <h2>Photos</h2>
+    <div class="photo-add">${PHOTO_CATS.map(cat=>`<button class="btn secondary" data-action="add-photos" data-val="${cat}">+ ${cat}</button>`).join('')}</div>
+    ${photosHtml || '<div class="empty">No photos yet. You can pick several at once.</div>'}
+  </section>
+
+  <section class="card" id="sec-fin">
+    <div class="sec-head"><h2>Financials</h2><span class="muted small">Internal · actual money</span></div>
+    <div class="sub-label" style="margin-top:4px">Actual income (what you were paid)</div>
+    <div class="row3">
+      <div><label>Labor</label>${moneyInput('data-f="income.labor" data-num', job.income.labor)}</div>
+      <div><label>Materials</label>${moneyInput('data-f="income.materials" data-num', job.income.materials)}</div>
+      <div><label>Other</label>${moneyInput('data-f="income.other" data-num', job.income.other)}</div>
+    </div>
+    <div class="sub-label">Actual expenses (receipts)</div>
+    <div class="exp-add">
+      <input id="exp-desc" placeholder="What you bought (e.g. 2x4 lumber)" style="margin-top:0">
+      <div class="row"><div><select id="exp-cat">${opts(EXPENSE_CATS,'Materials')}</select></div><div><input type="number" inputmode="decimal" step="0.01" min="0" id="exp-cost" placeholder="Cost"></div></div>
+      <button class="btn secondary wide" data-action="add-expense">+ Add expense</button>
+    </div>
+    <div>${job.expenses.map(e=>`<div class="exp"><span class="dot" style="background:${CAT_COLORS[e.category]||'#6b7280'}"></span><span class="exp-desc">${h(e.description)}<small>${h(e.category)}</small></span><span class="mono">${money(e.cost)}</span><button class="x" data-action="del-expense" data-id="${e.id}" aria-label="Remove">✕</button></div>`).join('')}</div>
+    <div class="totals dark">
+      <div class="t-row"><span>Income</span><b data-live="fin-income">${money(ft.income)}</b></div>
+      <div class="t-row"><span>Expenses</span><b data-live="fin-exp">${money(ft.expenses)}</b></div>
+      <div class="t-row"><span>Margin</span><b data-live="fin-margin">${ft.margin==null?'—':ft.margin.toFixed(0)+'%'}</b></div>
+      <div class="t-row big"><span>Profit</span><b class="${ft.profit>=0?'pos':'neg'}" data-live="fin-profit">${money(ft.profit)}</b></div>
+    </div>
+    <div class="sub-label">Estimate vs. actual</div>
+    <table class="cmp"><tr><th></th><th>Estimated</th><th>Actual</th></tr>
+      <tr><td>Price / income</td><td data-live="cmp-price-est">${money(et.cmpPrice)}</td><td data-live="cmp-price-act">${money(ft.income)}</td></tr>
+      <tr><td>My costs</td><td data-live="cmp-cost-est">${money(et.cmpCost)}</td><td data-live="cmp-cost-act">${money(ft.expenses)}</td></tr>
+      <tr><td><b>Profit</b></td><td data-live="cmp-profit-est">${money(et.cmpPrice-et.cmpCost)}</td><td data-live="cmp-profit-act"><b>${money(ft.profit)}</b></td></tr>
+    </table>
+  </section>
+
+  <section class="card"><h2>Internal notes</h2><textarea data-f="notes" placeholder="Anything worth remembering about this job">${h(job.notes)}</textarea></section>
+  <button class="btn danger-text wide" data-action="del-job">Delete this job</button>`;
+}
+// Update computed numbers in place (so typing never re-renders and steals focus).
+function updateJobLive(job){
+  const et=estTotals(job), ft=jobTotals(job), nw=nextWork(job);
+  const L = { 'snap-quoted':money(et.total), 'snap-approved':money(et.approved), 'snap-profit':money(ft.profit),
+    'snap-visit':apptLabel(job.estimateAppt)||'<span class="muted">Not set</span>', 'snap-work-label':nw.label, 'snap-work':nw.text,
+    'est-total':money(et.total), 'est-approved':money(et.approved), 'est-declined':money(et.declined),
+    'fin-income':money(ft.income), 'fin-exp':money(ft.expenses), 'fin-margin':ft.margin==null?'—':ft.margin.toFixed(0)+'%', 'fin-profit':money(ft.profit),
+    'cmp-price-est':money(et.cmpPrice), 'cmp-price-act':money(ft.income), 'cmp-cost-est':money(et.cmpCost), 'cmp-cost-act':money(ft.expenses),
+    'cmp-profit-est':money(et.cmpPrice-et.cmpCost), 'cmp-profit-act':`<b>${money(ft.profit)}</b>` };
+  job.estimate.items.forEach(it=>{ L['item-price-'+it.id]=money(itemPrice(it)); L['item-margin-'+it.id]=money(itemPrice(it)-itemCost(it)); });
+  job.workDays.forEach((w,i)=>{ L['wd-'+w.id]=`Day ${i+1}${w.date?' · '+fmtDateLong(w.date):''}`; });
+  for(const k in L){ const el=document.querySelector(`[data-live="${k}"]`); if(el) el.innerHTML=L[k]; }
+  const sp=document.querySelector('[data-live="snap-profit"]'); if(sp) sp.className='v '+(ft.profit>=0?'pos':'neg');
+  const fp=document.querySelector('[data-live="fin-profit"]'); if(fp) fp.className=ft.profit>=0?'pos':'neg';
+  const sw=document.querySelector('[data-action="schedule-work"]'); if(sw) sw.disabled=!et.anyApproved;
+  const dr=document.querySelector('[data-live-row="est-declined"]'); if(dr) dr.style.display=et.declined>0?'':'none';
+}
+
+// ============================================================
+// customer-facing estimate (print / share)
+// ============================================================
+function renderEstimate(job){
+  const c=data.clients[job.clientId], s=data.settings, et=estTotals(job), ap=job.estimate.approval;
+  const decided = job.estimate.items.some(i=>i.approval!=='pending');
+  const breakdown = ['materials','labor','other'].filter(k=>et.by[k]>0);
+  return `<div class="paper">
+    <div class="p-head">
+      <div><div class="p-biz">${h(s.businessName||'Estimate')}</div>${s.phone?`<div>${h(s.phone)}</div>`:''}${s.email?`<div>${h(s.email)}</div>`:''}</div>
+      <div class="p-meta"><div class="p-label">Estimate</div><div class="mono"><b>${h(job.number)}</b></div><div>${fmtDateFull(job.estimate.date||job.date)}</div></div>
+    </div>
+    <div class="p-cols">
+      <div><div class="p-label">Prepared for</div>${c?`<div><b>${h(c.name)}</b></div>${c.address?`<div>${h(c.address)}</div>`:''}${c.phone?`<div>${h(c.phone)}</div>`:''}${c.email?`<div>${h(c.email)}</div>`:''}`:'<div class="muted">No client selected</div>'}</div>
+      <div><div class="p-label">Job</div><div><b>${h(job.description)||'—'}</b></div></div>
+    </div>
+    ${job.estimate.items.map((it,i)=>{
+      const br = ['materials','labor','other'].filter(k=>it.price[k]>0);
+      const mark = it.approval==='approved'?'☑':it.approval==='declined'?'☒':'☐';
+      return `<div class="p-item ${it.approval}">
+        <div class="p-item-head"><div class="p-item-title"><span class="p-box">${mark}</span>${i+1}. ${h(it.description)||'Line item'}</div><div class="p-price">${money(itemPrice(it))}</div></div>
+        ${it.scope?`<div class="p-scope">${h(it.scope)}</div>`:''}
+        ${it.materials?`<div class="p-mats"><b>Materials:</b> ${h(it.materials)}</div>`:''}
+        ${br.length>1?`<div class="p-break">${br.map(k=>`${cap(k)} ${money(it.price[k])}`).join(' · ')}</div>`:''}
+        <div class="p-initials">${it.approval==='approved'?'<b>Approved</b> · ':it.approval==='declined'?'<b>Declined</b> · ':''}Initials: ${it.initials?`<b>${h(it.initials)}</b>`:'________'}</div>
+      </div>`; }).join('') || '<div class="empty">No line items on this estimate yet.</div>'}
+    <div class="p-totals">
+      ${breakdown.length>1 ? breakdown.map(k=>`<div class="p-trow"><span>${cap(k)}</span><span>${money(et.by[k])}</span></div>`).join('') : ''}
+      <div class="p-trow big"><span>Estimate total</span><span>${money(et.total)}</span></div>
+      ${decided?`<div class="p-trow big pos"><span>Approved total</span><span>${money(et.approved)}</span></div>`:''}
+    </div>
+    <div class="p-approval">
+      <div class="p-label">Customer approval</div>
+      ${ap.name||ap.date ? `<div style="margin-top:6px">Approved by <b>${h(ap.name)||'customer'}</b>${ap.date?' on '+fmtDateFull(ap.date):''}${ap.method?` (${h(ap.method)})`:''}.</div>${ap.notes?`<div class="muted">${h(ap.notes)}</div>`:''}`
+        : `<p class="small muted">Initial each line item you'd like to proceed with, then sign below. Approved items will be scheduled; declined items are not included in the total due.</p><div class="sig"><div>Customer signature</div><div>Date</div></div>`}
+    </div>
+    <div class="actions no-print"><button class="btn primary" data-action="print">Print / Save as PDF</button><button class="btn secondary" data-action="share-estimate">Share as text</button></div>
+  </div>`;
+}
+function estimateText(job){
+  const c=data.clients[job.clientId], et=estTotals(job), s=data.settings;
+  const lines = [`ESTIMATE ${job.number}${s.businessName?' — '+s.businessName:''}`, c?`For: ${c.name}`:'', job.description?`Job: ${job.description}`:'', ''];
+  job.estimate.items.forEach((it,i)=>{ lines.push(`${i+1}. ${it.description||'Line item'} — ${money(itemPrice(it))}${it.approval==='declined'?' (declined)':it.approval==='approved'?' (approved)':''}`); if(it.scope) lines.push(it.scope.split('\n').map(l=>'   '+l).join('\n')); lines.push(''); });
+  lines.push(`Estimate total: ${money(et.total)}`);
+  if(et.anyApproved) lines.push(`Approved total: ${money(et.approved)}`);
+  if(s.phone) lines.push('', s.phone);
+  return lines.filter(l=>l!==null).join('\n');
+}
+async function shareEstimate(job){
+  const text = estimateText(job), title = `Estimate ${job.number}`;
+  if(navigator.share){ try{ await navigator.share({ title, text }); return; }catch(e){ if(e.name==='AbortError') return; } }
+  try{ await navigator.clipboard.writeText(text); toast('Estimate copied — paste it into a text or email'); }catch(e){ toast('Sharing not available here — use Print / PDF'); }
+}
+
+// ============================================================
+// CLIENTS
+// ============================================================
+function renderClients(){
+  return `<div class="toolbar"><input data-ui="clientQ" placeholder="Search clients" value="${h(ui.clientQ)}"></div><div id="clients-list">${clientsListHtml()}</div>`;
+}
+function clientsListHtml(){
+  const q=ui.clientQ.trim().toLowerCase();
+  let cs=Object.values(data.clients); if(q) cs=cs.filter(c=>c.name.toLowerCase().includes(q)||c.phone.includes(q)||c.address.toLowerCase().includes(q));
+  cs.sort((a,b)=>a.name.localeCompare(b.name));
+  if(!cs.length) return `<div class="empty">${Object.keys(data.clients).length?'No clients match.':'No clients yet. Tap + to add one, or add one while creating a job.'}</div>`;
+  return cs.map(c=>{ const n=Object.values(data.jobs).filter(j=>j.clientId===c.id).length;
+    return `<div class="list-row" data-action="open-client" data-id="${c.id}"><div><b>${h(c.name)}</b><span>${h(c.phone||c.email||c.address||'No contact info')}</span></div><div class="count">${n} job${n===1?'':'s'}</div></div>`; }).join('');
+}
+function renderClientDetail(c){
+  const jobs=Object.values(data.jobs).filter(j=>j.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+  return `<section class="card">
+    <div class="cb-name big">${h(c.name)}</div>
+    ${c.phone?`<div class="cb-line">${h(c.phone)}</div>`:''}${c.email?`<div class="cb-line">${h(c.email)}</div>`:''}${c.address?`<div class="cb-line">${h(c.address)}</div>`:''}
+    ${c.notes?`<p class="small" style="margin-top:8px">${h(c.notes)}</p>`:''}
+    <div class="cb-actions">
+      ${c.phone?`<a class="btn small" href="tel:${tel(c.phone)}">Call</a><a class="btn small" href="sms:${tel(c.phone)}">Text</a>`:''}
+      ${c.email?`<a class="btn small" href="mailto:${h(c.email)}">Email</a>`:''}
+      ${c.address?`<a class="btn small" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">Map</a>`:''}
+      <button class="btn small" data-action="client-edit">Edit</button>
+    </div></section>
+    <div class="sec-head" style="margin:14px 2px 8px"><h2 style="font-size:16px">Jobs (${jobs.length})</h2><button class="btn small primary" data-action="client-new-job">+ New job</button></div>
+    ${jobs.map(jobCard).join('') || '<div class="empty">No jobs yet for this client.</div>'}
+    <button class="btn danger-text wide" data-action="client-delete">Delete client</button>`;
+}
+function clientFormHtml(c){
+  return `<h3>${c?'Edit client':'New client'}</h3>
+    <label>Name</label><input id="cf-name" value="${c?h(c.name):''}" placeholder="Client name" autocomplete="off">
+    <div class="row"><div><label>Phone</label><input id="cf-phone" type="tel" value="${c?h(c.phone):''}" placeholder="(248) 555-0100"></div><div><label>Email</label><input id="cf-email" type="email" value="${c?h(c.email):''}" placeholder="name@email.com"></div></div>
+    <label>Address</label><input id="cf-address" value="${c?h(c.address):''}" placeholder="Street, city">
+    <label>Notes</label><textarea id="cf-notes" class="short">${c?h(c.notes):''}</textarea>
+    <div class="actions"><button class="btn secondary" data-action="sheet-close">Cancel</button><button class="btn primary" data-action="cf-save" data-id="${c?c.id:''}">Save client</button></div>`;
+}
+function openSheet(html){ document.getElementById('sheet').innerHTML=html; document.getElementById('sheet-bg').classList.add('open'); }
+function closeSheet(){ document.getElementById('sheet-bg').classList.remove('open'); pickerCb=null; }
+function openClientPicker(cb){
+  pickerCb = cb;
+  openSheet(`<h3>Select client</h3><input id="pk-q" placeholder="Search by name" autocomplete="off"><div id="pk-list" style="max-height:40vh;overflow:auto;margin-top:8px">${pickerListHtml('')}</div>
+    <div class="actions"><button class="btn secondary" data-action="sheet-close">Cancel</button><button class="btn primary" data-action="pk-new">+ New client</button></div>`);
+  setTimeout(()=>{ const q=document.getElementById('pk-q'); if(q) q.focus(); }, 50);
+}
+function pickerListHtml(q){
+  q=q.toLowerCase(); const cs=Object.values(data.clients).filter(c=>c.name.toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
+  return cs.length ? cs.map(c=>`<div class="pk-row" data-action="pk-select" data-id="${c.id}"><b>${h(c.name)}</b><span>${h(c.phone||c.email||c.address||'')}</span></div>`).join('') : '<div class="empty">No matching clients.</div>';
+}
+function saveClientForm(id){
+  const v=k=>document.getElementById('cf-'+k).value.trim();
+  const name=v('name'); if(!name){ toast('Enter a client name'); return; }
+  id = id || uid();
+  data.clients[id] = { id, name, phone:v('phone'), email:v('email'), address:v('address'), notes:v('notes') };
+  persist(); const cb=pickerCb; closeSheet(); toast('Client saved');
+  if(cb) cb(id); else render();
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function renderCalendar(){
+  const ev=[]; Object.values(data.jobs).forEach(j=>{
+    if(j.estimateAppt.date) ev.push({ date:j.estimateAppt.date, time:j.estimateAppt.time, end:'', type:'est', label:'Estimate', job:j, notes:'' });
+    j.workDays.forEach(w=>{ if(w.date) ev.push({ date:w.date, time:w.start, end:w.end, type:'work', label:'Work', job:j, notes:w.notes }); });
+  });
+  ev.sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
+  const t=todayStr(), up=ev.filter(e=>e.date>=t), past=ev.filter(e=>e.date<t).reverse();
+  const group = list => { const out=[]; let cur=null; list.forEach(e=>{ if(!cur||cur.date!==e.date){ cur={date:e.date, items:[]}; out.push(cur); } cur.items.push(e); }); return out; };
+  const dayHtml = g => `<div class="day"><div class="day-head">${fmtDateLong(g.date)}${g.date===t?'<span class="today">Today</span>':''}</div>${g.items.map(e=>{ const c=data.clients[e.job.clientId];
+    return `<div class="ev" data-action="open-job" data-id="${e.job.id}"><div class="ev-time">${e.time?fmtTime(e.time):'—'}${e.end?`<br><span class="muted">to ${fmtTime(e.end)}</span>`:''}</div>
+      <div class="ev-main"><b>${h(e.job.number)} · ${h(e.job.description)||'Untitled'}</b><span class="muted small">${c?h(c.name):'No client'}${c&&c.address?' · '+h(c.address):''}${e.notes?' · '+h(e.notes):''}</span></div><span class="ev-type ${e.type}">${e.label}</span></div>`; }).join('')}</div>`;
+  return `${up.length ? group(up).map(dayHtml).join('') : '<div class="empty">Nothing scheduled. Set an estimate visit or add work days on a job.</div>'}
+    ${past.length ? `<button class="btn secondary wide" data-action="cal-toggle-past">${ui.showPast?'Hide':'Show'} past (${past.length})</button>${ui.showPast?'<div style="margin-top:12px">'+group(past).map(dayHtml).join('')+'</div>':''}` : ''}`;
+}
+
+// ============================================================
+// OVERVIEW
+// ============================================================
+function renderOverview(){
+  const b=rangeBounds(), jobs=Object.values(data.jobs).filter(j=>inRange(j.date,b));
+  let inc={labor:0,materials:0,other:0}, matCost=0, otherCost=0, quoted=0, approved=0;
+  const counts={}; STATUSES.forEach(s=>counts[s]=0);
+  jobs.forEach(j=>{ ['labor','materials','other'].forEach(k=>inc[k]+=j.income[k]||0);
+    j.expenses.forEach(e=>{ if(e.category==='Materials') matCost+=e.cost; else otherCost+=e.cost; });
+    const et=estTotals(j); quoted+=et.total; approved+=et.approved; counts[j.status]++; });
+  const income=inc.labor+inc.materials+inc.other, expenses=matCost+otherCost, profit=income-expenses;
+  return `<div class="card">${rangeControl()}</div>
+    <div class="stats">
+      <div class="stat"><div class="num">${money(income)}</div><div class="lbl">Income</div></div>
+      <div class="stat"><div class="num">${money(expenses)}</div><div class="lbl">Expenses</div></div>
+      <div class="stat" style="border-top-color:${profit>=0?'var(--green)':'var(--red)'}"><div class="num ${profit>=0?'pos':'neg'}">${money(profit)}</div><div class="lbl">Net profit</div></div>
+    </div>
+    <div class="card"><h2>Breakdown</h2>
+      <div class="brow"><span>Labor income</span><b>${money(inc.labor)}</b></div>
+      <div class="brow"><span>Materials income</span><b>${money(inc.materials)}</b></div>
+      <div class="brow"><span>Other income</span><b>${money(inc.other)}</b></div>
+      <div class="brow"><span>Material costs</span><b>${money(matCost)}</b></div>
+      <div class="brow"><span>Other expenses</span><b>${money(otherCost)}</b></div>
+      <div class="brow"><span>Margin</span><b>${income?(profit/income*100).toFixed(0)+'%':'—'}</b></div>
+      <div class="brow"><span>Jobs in range</span><b>${jobs.length}</b></div>
+    </div>
+    <div class="card"><h2>Pipeline</h2>
+      <div class="brow"><span>Quoted</span><b>${money(quoted)}</b></div>
+      <div class="brow"><span>Approved</span><b class="pos">${money(approved)}</b></div>
+      ${STATUSES.map(s=>`<div class="brow"><span>${statusChip({status:s})}</span><b>${counts[s]}</b></div>`).join('')}
+    </div>`;
+}
+
+// ============================================================
+// SETTINGS / backup
+// ============================================================
+function renderSettings(){
+  const s=data.settings, nJ=Object.keys(data.jobs).length, nC=Object.keys(data.clients).length, nP=Object.values(data.jobs).reduce((n,j)=>n+j.photos.length,0);
+  const mb=(JSON.stringify(data).length/1048576).toFixed(1);
+  return `<section class="card"><h2>Business info</h2><p class="muted small" style="margin-top:0">Shown on your estimates and in the "On my way" text.</p>
+      <label>Business name</label><input data-f="businessName" value="${h(s.businessName)}" placeholder="e.g. Rivera Handyman Services">
+      <div class="row"><div><label>Phone</label><input data-f="phone" type="tel" value="${h(s.phone)}"></div><div><label>Email</label><input data-f="email" type="email" value="${h(s.email)}"></div></div>
+    </section>
+    <section class="card"><h2>Backup</h2>
+      <p class="muted small" style="margin-top:0">Everything saves automatically on this phone. It lives only here — download a backup now and then and keep it in Google Drive, so a lost phone or cleared browser data doesn't take your jobs with it.</p>
+      <button class="btn primary wide" data-action="export-json">Download backup</button>
+      <button class="btn secondary wide" data-action="import-json">Restore from backup</button>
+      <button class="btn secondary wide" data-action="export-csv">Export jobs as spreadsheet (CSV)</button>
+      <div class="muted small" style="margin-top:12px">${nJ} jobs · ${nC} clients · ${nP} photos · ~${mb} MB</div>
+    </section>
+    <section class="card danger"><h2 style="color:var(--red)">Danger zone</h2><button class="btn danger-text" data-action="reset" style="padding-left:0">Erase all data on this phone</button></section>
+    <div class="muted small" style="text-align:center;padding:8px">Job Tracker v5</div>`;
+}
+function download(name, content, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 5000); }
+function exportCSV(){
+  const rows=[['Job #','Job date','Status','On hold','Client','Job name','Estimate total','Approved total','Estimate visit','Work days','Labor income','Materials income','Other income','Total income','Expenses','Profit','Margin %','Notes']];
+  Object.values(data.jobs).sort((a,b)=>a.number.localeCompare(b.number)).forEach(j=>{ const c=data.clients[j.clientId], et=estTotals(j), ft=jobTotals(j);
+    rows.push([j.number, j.date, j.status, j.onHold?'yes':'', c?c.name:'', j.description, et.total.toFixed(2), et.approved.toFixed(2), j.estimateAppt.date?j.estimateAppt.date+' '+j.estimateAppt.time:'', j.workDays.map(w=>w.date).filter(Boolean).join(' '),
+      j.income.labor.toFixed(2), j.income.materials.toFixed(2), j.income.other.toFixed(2), ft.income.toFixed(2), ft.expenses.toFixed(2), ft.profit.toFixed(2), ft.margin==null?'':ft.margin.toFixed(1), j.notes]); });
+  download(`jobs-${todayStr()}.csv`, rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'), 'text/csv');
+}
+document.getElementById('import-input').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader(); rd.onload=async()=>{ try{
+    const incoming=normalizeData(JSON.parse(rd.result)); const n=Object.keys(incoming.jobs).length;
+    if(!confirm(`Restore ${n} job(s) and ${Object.keys(incoming.clients).length} client(s) from this backup? This replaces what's on the phone now.`)) return;
+    data=incoming; await persist(); toast('Backup restored'); render();
+  }catch(err){ toast('That file is not a valid backup'); } };
+  rd.readAsText(f); e.target.value='';
+});
+
+// ============================================================
+// photos
+// ============================================================
+function compressImage(file, max=1400, q=0.8){ return new Promise(res=>{
+  const img=new Image(), url=URL.createObjectURL(file);
+  img.onload=()=>{ const s=Math.min(1, max/Math.max(img.width,img.height)); const w=Math.round(img.width*s), hh=Math.round(img.height*s);
+    const c=document.createElement('canvas'); c.width=w; c.height=hh; c.getContext('2d').drawImage(img,0,0,w,hh); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg',q)); };
+  img.onerror=()=>{ URL.revokeObjectURL(url); res(null); }; img.src=url; }); }
+document.getElementById('photo-input').addEventListener('change', async e=>{
+  const files=[...e.target.files]; e.target.value=''; const job=data.jobs[route.id]; if(!files.length||!job) return;
+  toast(`Adding ${files.length} photo${files.length===1?'':'s'}…`); let n=0;
+  for(const f of files){ const d=await compressImage(f); if(d){ job.photos.push({ id:uid(), category:pendingPhotoCat, data:d, addedAt:todayStr() }); n++; } }
+  await persist(); rerenderJob(); toast(`${n} photo${n===1?'':'s'} added to ${pendingPhotoCat}`);
+});
+function openViewer(id){ const job=data.jobs[route.id], p=job&&job.photos.find(p=>p.id===id); if(!p) return; viewerPhotoId=id;
+  document.getElementById('viewer-img').src=p.data; document.getElementById('viewer-cat').innerHTML=opts(PHOTO_CATS,p.category); document.getElementById('viewer').classList.add('open'); }
+function closeViewer(){ document.getElementById('viewer').classList.remove('open'); document.getElementById('viewer-img').src=''; viewerPhotoId=null; }
+document.getElementById('viewer-cat').addEventListener('change', e=>{ const job=data.jobs[route.id], p=job&&job.photos.find(p=>p.id===viewerPhotoId); if(p){ p.category=e.target.value; persist(); rerenderJob(); } });
+
+// ============================================================
+// events: one delegated click handler + one input handler
+// ============================================================
+document.addEventListener('click', e=>{
+  const el=e.target.closest('[data-action]'); if(!el) return;
+  if(el.id==='sheet-bg' && e.target!==el) return;
+  const a=el.dataset.action, id=el.dataset.id, val=el.dataset.val;
+  const job = (route.view==='job'||route.view==='estimate') ? data.jobs[route.id] : null;
+  switch(a){
+    case 'nav': go(val, null, true); break;
+    case 'back': goBack(); break;
+    case 'new-job': go('job', createJob().id); break;
+    case 'open-job': go('job', id); break;
+    case 'open-client': go('client', id); break;
+    case 'new-client': openSheet(clientFormHtml(null)); break;
+    case 'filter-status': ui.status=val; document.getElementById('jobs-list').innerHTML=jobsListHtml(); document.querySelectorAll('[data-action="filter-status"]').forEach(b=>b.classList.toggle('on', b.dataset.val===val)); break;
+    case 'cal-toggle-past': ui.showPast=!ui.showPast; render(); break;
+
+    // job
+    case 'status': job.status=val; scheduleSave(); rerenderJob(); break;
+    case 'pick-client': openClientPicker(cid=>{ job.clientId=cid; persist(); rerenderJob(); }); break;
+    case 'add-item': job.estimate.items.push(normalizeItem({})); scheduleSave(); rerenderJob();
+      setTimeout(()=>{ const items=document.querySelectorAll('.item'); const last=items[items.length-1]; if(last){ last.scrollIntoView({behavior:'smooth',block:'center'}); last.querySelector('input').focus(); } }, 50); break;
+    case 'del-item': { const it=job.estimate.items.find(i=>i.id===id); if(it && (it.description||it.scope||itemPrice(it)) && !confirm('Remove this line item?')) break;
+      job.estimate.items=job.estimate.items.filter(i=>i.id!==id); scheduleSave(); rerenderJob(); break; }
+    case 'item-approval': { const it=job.estimate.items.find(i=>i.id===id); if(!it) break; it.approval=val;
+      if(val==='approved' && (job.status==='Lead'||job.status==='Estimate')){ job.status='Approved'; toast('Job status set to Approved'); }
+      scheduleSave(); rerenderJob(); break; }
+    case 'view-estimate': flushSave(); go('estimate', job.id); break;
+    case 'schedule-work': if(!job.workDays.length) job.workDays.push({ id:uid(), date:'', start:'08:00', end:'', notes:'' });
+      if(['Lead','Estimate','Approved'].includes(job.status)) job.status='Scheduled';
+      scheduleSave(); rerenderJob(); setTimeout(()=>document.getElementById('sec-schedule').scrollIntoView({behavior:'smooth',block:'start'}), 50); break;
+    case 'add-workday': { const last=job.workDays[job.workDays.length-1];
+      job.workDays.push({ id:uid(), date: last&&last.date ? ymd(new Date(parseDate(last.date).getTime()+86400000)) : '', start:last?last.start:'08:00', end:last?last.end:'', notes:'' });
+      scheduleSave(); rerenderJob(); break; }
+    case 'del-workday': job.workDays=job.workDays.filter(w=>w.id!==id); scheduleSave(); rerenderJob(); break;
+    case 'add-photos': pendingPhotoCat=val; document.getElementById('photo-input').click(); break;
+    case 'view-photo': openViewer(id); break;
+    case 'viewer-close': closeViewer(); break;
+    case 'photo-del': if(confirm('Delete this photo?')){ job.photos=job.photos.filter(p=>p.id!==viewerPhotoId); closeViewer(); persist(); rerenderJob(); } break;
+    case 'add-expense': { const desc=document.getElementById('exp-desc').value.trim(), cat=document.getElementById('exp-cat').value, cost=parseFloat(document.getElementById('exp-cost').value)||0;
+      if(!desc || cost<=0){ toast('Enter what you bought and what it cost'); break; }
+      job.expenses.push({ id:uid(), description:desc, category:cat, cost }); scheduleSave(); rerenderJob();
+      setTimeout(()=>document.getElementById('exp-desc').focus(), 30); break; }
+    case 'del-expense': job.expenses=job.expenses.filter(x=>x.id!==id); scheduleSave(); rerenderJob(); break;
+    case 'del-job': if(confirm(`Delete job ${job.number}? This cannot be undone.`)){ clearTimeout(saveTimer); saveTimer=null; delete data.jobs[job.id]; persist(); toast('Job deleted'); go('jobs', null, true); } break;
+
+    // estimate view
+    case 'print': window.print(); break;
+    case 'share-estimate': shareEstimate(job); break;
+
+    // sheet / client forms
+    case 'sheet-bg': case 'sheet-close': closeSheet(); break;
+    case 'pk-select': { const cb=pickerCb; closeSheet(); if(cb) cb(id); break; }
+    case 'pk-new': openSheet(clientFormHtml(null)); break; // pickerCb stays set so the new client gets selected
+    case 'cf-save': saveClientForm(id); break;
+    case 'client-edit': openSheet(clientFormHtml(data.clients[route.id])); break;
+    case 'client-new-job': go('job', createJob(route.id).id); break;
+    case 'client-delete': { const n=Object.values(data.jobs).filter(j=>j.clientId===route.id).length;
+      if(n){ alert(`This client has ${n} job(s). Open those jobs and change the client first, or delete them.`); break; }
+      if(confirm('Delete this client?')){ delete data.clients[route.id]; persist(); toast('Client deleted'); go('clients', null, true); } break; }
+
+    // settings
+    case 'export-json': flushSave(); download(`job-tracker-backup-${todayStr()}.json`, JSON.stringify(data), 'application/json'); break;
+    case 'import-json': document.getElementById('import-input').click(); break;
+    case 'export-csv': exportCSV(); break;
+    case 'reset': if(confirm('Erase ALL jobs, clients, photos and settings from this phone? Download a backup first if you might want them back.') && confirm('Really erase everything?')){ data=emptyData(); persist(); toast('All data erased'); go('jobs', null, true); } break;
+  }
+});
+
+function onField(e){
+  const el=e.target;
+  if(el.dataset.ui!=null){
+    const k=el.dataset.ui; setPath(ui, k, el.value);
+    if(k==='q'){ document.getElementById('jobs-list').innerHTML=jobsListHtml(); }
+    else if(k==='clientQ'){ document.getElementById('clients-list').innerHTML=clientsListHtml(); }
+    else if(e.type==='change' || k==='range.preset' || k==='sort'){ render(); }
+    return;
+  }
+  if(el.id==='pk-q'){ document.getElementById('pk-list').innerHTML=pickerListHtml(el.value); return; }
+  if(el.dataset.f==null) return;
+  if(route.view==='settings'){ data.settings[el.dataset.f]=el.value.trim(); scheduleSave(); return; }
+  if(route.view!=='job') return;
+  const job=data.jobs[route.id]; if(!job) return;
+  let target=job;
+  if(el.dataset.item){ target=job.estimate.items.find(i=>i.id===el.dataset.item); }
+  else if(el.dataset.wd){ target=job.workDays.find(w=>w.id===el.dataset.wd); }
+  if(!target) return;
+  const v = el.type==='checkbox' ? el.checked : (el.dataset.num!=null ? (parseFloat(el.value)||0) : el.value);
+  setPath(target, el.dataset.f, v);
+  scheduleSave();
+  if(el.dataset.f==='onHold') rerenderJob(); else updateJobLive(job);
+}
+document.addEventListener('input', onField);
+document.addEventListener('change', onField);
+
+// ============================================================
+// boot
+// ============================================================
+(async function(){
+  await loadData();
+  try{ history.replaceState(route,''); }catch(e){ histOk=false; }
+  render();
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+})();
+</script>
+</body>
+</html>
